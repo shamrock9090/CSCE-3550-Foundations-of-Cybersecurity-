@@ -96,6 +96,13 @@ def test_key_manager_no_key_error():
 
 # --- Endpoint Integration Tests ---
 
+def test_root_endpoint(client):
+    res = client.get("/")
+    assert res.status_code == 200
+    data = res.get_json()
+    assert "keys" in data
+
+
 def test_jwks_endpoint(client):
     res = client.get("/.well-known/jwks.json")
     assert res.status_code == 200

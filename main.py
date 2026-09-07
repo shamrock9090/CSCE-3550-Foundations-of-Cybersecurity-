@@ -14,6 +14,7 @@ app = Flask(__name__)
 key_manager = KeyManager()
 
 
+@app.route("/", methods=["GET"])
 @app.route("/.well-known/jwks.json", methods=["GET"])
 @app.route("/jwks", methods=["GET"])
 def jwks():
