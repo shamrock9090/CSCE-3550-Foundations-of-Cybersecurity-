@@ -1,4 +1,6 @@
 # CSCE 3550 - RESTful JWKS Server
+#<img width="3024" height="1964" alt="Image 9-7-26 at 11 59 AM" src="https://github.com/user-attachments/assets/74606917-9cb8-4992-b1d8-8e1771216d88" />
+#<img width="3024" height="1964" alt="Image 9-7-26 at 12 02 PM" src="https://github.com/user-attachments/assets/5d58c30f-8deb-4366-8903-30b5be788ce8" />
 
 This repository contains the CSCE 3550 Foundations of Cybersecurity project implementing a RESTful JWKS (JSON Web Key Set) server in Python using Flask, `cryptography`, and `PyJWT`.
 
