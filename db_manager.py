@@ -24,14 +24,18 @@ CREATE TABLE IF NOT EXISTS keys(
 def get_connection() -> sqlite3.Connection:
     """Open and return a connection to the SQLite database file."""
     conn = sqlite3.connect(DB_FILE)
+    conn.isolation_level = None  # autocommit mode
     return conn
 
 
 def initialize_db() -> None:
     """Create the SQLite DB file and keys table if they don't exist."""
-    with get_connection() as conn:
+    conn = get_connection()
+    try:
         conn.execute(CREATE_TABLE_SQL)
         conn.commit()
+    finally:
+        conn.close()
 
 
 def save_key(pem_bytes: bytes, exp_timestamp: int) -> int:
@@ -46,10 +50,13 @@ def save_key(pem_bytes: bytes, exp_timestamp: int) -> int:
     """
     # Use parameterized query to prevent SQL injection
     sql = "INSERT INTO keys (key, exp) VALUES (?, ?)"
-    with get_connection() as conn:
+    conn = get_connection()
+    try:
         cursor = conn.execute(sql, (pem_bytes, exp_timestamp))
         conn.commit()
         return cursor.lastrowid
+    finally:
+        conn.close()
 
 
 def get_unexpired_key() -> tuple | None:
@@ -61,8 +68,11 @@ def get_unexpired_key() -> tuple | None:
     now_ts = int(datetime.now(timezone.utc).timestamp())
     # Parameterized query: only select keys with exp > current time
     sql = "SELECT kid, key, exp FROM keys WHERE exp > ? LIMIT 1"
-    with get_connection() as conn:
+    conn = get_connection()
+    try:
         row = conn.execute(sql, (now_ts,)).fetchone()
+    finally:
+        conn.close()
     return row
 
 
@@ -75,8 +85,11 @@ def get_expired_key() -> tuple | None:
     now_ts = int(datetime.now(timezone.utc).timestamp())
     # Parameterized query: only select keys with exp <= current time
     sql = "SELECT kid, key, exp FROM keys WHERE exp <= ? LIMIT 1"
-    with get_connection() as conn:
+    conn = get_connection()
+    try:
         row = conn.execute(sql, (now_ts,)).fetchone()
+    finally:
+        conn.close()
     return row
 
 
@@ -89,6 +102,9 @@ def get_all_valid_keys() -> list[tuple]:
     now_ts = int(datetime.now(timezone.utc).timestamp())
     # Parameterized query: fetch all rows with exp > current time
     sql = "SELECT kid, key, exp FROM keys WHERE exp > ?"
-    with get_connection() as conn:
+    conn = get_connection()
+    try:
         rows = conn.execute(sql, (now_ts,)).fetchall()
+    finally:
+        conn.close()
     return rows
