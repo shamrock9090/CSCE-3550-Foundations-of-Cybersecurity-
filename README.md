@@ -1,5 +1,6 @@
-[Pasted 2026-10-15 at 4.59.04 PM.tiff](https://github.com/user-attachments/files/33517335/Pasted.2026-10-15.at.4.59.04.PM.png)
-[Pasted 2026-10-15 at 5.03.18 PM.tiff](https://github.com/user-attachments/files/33517337/Pasted.2026-10-15.at.5.03.18.PM.png)
+<img width="1512" height="982" alt="Pasted 2026-10-15 at 4 59 04 PM" src="https://github.com/user-attachments/assets/e794e58f-1fb1-4669-a19b-2f64000f043f" />
+<img width="1512" height="982" alt="Pasted 2026-10-15 at 5 03 18 PM" src="https://github.com/user-attachments/assets/06ba7d09-5c4a-4797-8378-754f2fd95025" />
+
 
 # CSCE 3550 — Project 2: JWKS Server with SQLite
 
