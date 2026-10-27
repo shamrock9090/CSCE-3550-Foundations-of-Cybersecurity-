@@ -431,7 +431,7 @@ class TestAuthEndpoint:
         """11th request in quick succession should return 429."""
         import main as m
         m._buckets.clear()
-        # Freeze monotonic time so no tokens refill between requests
+        # Freeze monotonic time so no window resets between requests
         fixed_time = time.monotonic()
         with patch("main.time.monotonic", return_value=fixed_time):
             responses = [client.post("/auth") for _ in range(11)]
@@ -439,13 +439,17 @@ class TestAuthEndpoint:
         assert 429 in status_codes
 
     def test_auth_rate_limit_refills(self, client):
-        """After waiting >1s the bucket should refill and allow requests."""
+        """After waiting >1s the window resets and allows requests."""
         import main as m
         m._buckets.clear()
-        for _ in range(10):
-            client.post("/auth")
-        time.sleep(1.1)
-        res = client.post("/auth")
+        fixed_time = time.monotonic()
+        with patch("main.time.monotonic", return_value=fixed_time):
+            for _ in range(10):
+                client.post("/auth")
+        # New window: time advanced by 1.1s → counter resets
+        new_time = fixed_time + 1.1
+        with patch("main.time.monotonic", return_value=new_time):
+            res = client.post("/auth")
         assert res.status_code == 200
 
     def test_auth_get_not_allowed(self, client):

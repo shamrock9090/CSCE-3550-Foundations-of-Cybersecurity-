@@ -36,10 +36,10 @@ _ph = PasswordHasher(
 )
 
 # ---------------------------------------------------------------------------
-# Token-bucket rate limiter (10 requests/second on POST /auth)
+# Fixed-window rate limiter (10 requests/second on POST /auth)
 # ---------------------------------------------------------------------------
-_RATE_LIMIT = 10          # max requests per window
-_RATE_WINDOW = 1.0        # seconds
+_RATE_LIMIT = 10       # max requests per 1-second window
+_RATE_WINDOW = 1.0     # window size in seconds
 _bucket_lock = threading.Lock()
 _buckets: dict[str, dict] = {}   # keyed by client IP
 
@@ -47,27 +47,21 @@ _buckets: dict[str, dict] = {}   # keyed by client IP
 def _is_rate_limited(ip: str) -> bool:
     """Return True if the given IP has exceeded 10 requests per second.
 
-    Uses a token-bucket algorithm: each IP gets 10 tokens/second.
+    Uses a fixed-window counter: counts requests within the current
+    1-second window and rejects once the count exceeds _RATE_LIMIT.
     """
     now = time.monotonic()
     with _bucket_lock:
         bucket = _buckets.get(ip)
-        if bucket is None:
-            _buckets[ip] = {"tokens": _RATE_LIMIT - 1, "last": now}
+        if bucket is None or (now - bucket["window_start"]) >= _RATE_WINDOW:
+            # Start a fresh window
+            _buckets[ip] = {"window_start": now, "count": 1}
             return False
 
-        elapsed = now - bucket["last"]
-        # Refill tokens proportionally to time elapsed
-        bucket["tokens"] = min(
-            _RATE_LIMIT,
-            bucket["tokens"] + elapsed * _RATE_LIMIT / _RATE_WINDOW,
-        )
-        bucket["last"] = now
-
-        if bucket["tokens"] >= 1:
-            bucket["tokens"] -= 1
-            return False
-        return True
+        bucket["count"] += 1
+        if bucket["count"] > _RATE_LIMIT:
+            return True
+        return False
 
 
 # ---------------------------------------------------------------------------
@@ -112,7 +106,7 @@ def auth():
     Rate limited to 10 requests/second per IP (returns 429 on breach).
     Every successful request is logged to auth_logs.
     """
-    client_ip = request.remote_addr or "unknown"
+    client_ip = request.remote_addr or "127.0.0.1"
 
     # --- Rate limiting ---
     if _is_rate_limited(client_ip):
@@ -147,6 +141,9 @@ def auth():
     user_row = db_manager.get_user_by_username(username)
     user_id = user_row[0] if user_row else None
 
+    # --- Log the authentication request (before JWT encoding) ---
+    db_manager.log_auth_request(client_ip, user_id)
+
     payload = {
         "sub": username,
         "iat": int(now.timestamp()),
@@ -164,9 +161,6 @@ def auth():
         return jsonify({"error": f"JWT encoding failed: {str(err)}"}), 500
     except Exception as err:
         return jsonify({"error": f"Internal server error: {str(err)}"}), 500
-
-    # --- Log the authentication request ---
-    db_manager.log_auth_request(client_ip, user_id)
 
     return token, 200, {"Content-Type": "application/jwt"}
 
