@@ -8,3 +8,5 @@ htmlcov/
 *.zip
 gradebot
 .DS_Store
+*.db
+*.db*
