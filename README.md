@@ -1,3 +1,6 @@
+<img width="1545" height="506" alt="694987506-65350456-2e8d-4fae-9ebb-3ab93ec5a59e" src="https://github.com/user-attachments/assets/d7ccb2e5-76f4-4250-9362-ac2a025bf7cd" />
+<img width="1512" height="982" alt="675206040-e794e58f-1fb1-4669-a19b-2f64000f043f" src="https://github.com/user-attachments/assets/f389e7a2-2291-4596-8aa0-644f344156ff" />
+<img width="1512" height="982" alt="675205999-06ba7d09-5c4a-4797-8378-754f2fd95025" src="https://github.com/user-attachments/assets/a493ce8e-2652-4188-afef-d3b536c9b642" />
 
 # CSCE 3550 — Project 2: JWKS Server with SQLite
 
