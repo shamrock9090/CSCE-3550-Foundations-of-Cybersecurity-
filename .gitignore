@@ -9,3 +9,5 @@ htmlcov/
 gradebot
 .DS_Store
 totally_not_my_privateKeys.db
+*.db
+*.bak
