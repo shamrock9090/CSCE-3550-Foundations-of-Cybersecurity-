@@ -1,4 +1,4 @@
-<img width="1545" height="506" alt="Image 11-4-26 at 9 07 AM" src="https://github.com/user-attachments/assets/d50b40be-0716-40f9-af45-012612525e62" />
+
 # CSCE 3550 — Project 2: JWKS Server with SQLite
 
 A RESTful JWKS (JSON Web Key Set) server built with Python/Flask, backed by a SQLite database for persistent private key storage. Parameterized SQL queries are used throughout to prevent SQL injection.
