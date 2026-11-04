@@ -55,10 +55,14 @@ CREATE TABLE IF NOT EXISTS auth_logs(
 # Connection helper
 # ---------------------------------------------------------------------------
 
+def get_db_path() -> str:
+    """Return the absolute path to the database file."""
+    return os.path.abspath(DB_FILE)
+
+
 def get_connection() -> sqlite3.Connection:
     """Open and return a connection to the SQLite database file."""
-    conn = sqlite3.connect(DB_FILE)
-    conn.isolation_level = None  # autocommit mode
+    conn = sqlite3.connect(get_db_path())
     return conn
 
 
@@ -85,7 +89,7 @@ def initialize_db() -> None:
 def _get_aes_key() -> bytes:
     """Read and validate the AES key from the NOT_MY_KEY environment variable.
 
-    The env-var value is UTF-8 encoded and then hashed/padded to exactly
+    The env-var value is UTF-8 encoded and then hashed to exactly
     32 bytes (AES-256) so that any string value works safely.
 
     Returns:
@@ -117,7 +121,9 @@ def encrypt_key(plaintext: bytes) -> bytes:
     Returns:
         iv (16 bytes) + ciphertext bytes.
     """
-    from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+    from cryptography.hazmat.primitives.ciphers import (
+        Cipher, algorithms, modes,
+    )
     from cryptography.hazmat.primitives import padding as sym_padding
 
     aes_key = _get_aes_key()
@@ -142,7 +148,9 @@ def decrypt_key(blob: bytes) -> bytes:
     Returns:
         Original plaintext bytes.
     """
-    from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+    from cryptography.hazmat.primitives.ciphers import (
+        Cipher, algorithms, modes,
+    )
     from cryptography.hazmat.primitives import padding as sym_padding
 
     aes_key = _get_aes_key()
@@ -253,7 +261,10 @@ def create_user(username: str, password_hash: str, email: str) -> int:
     Raises:
         sqlite3.IntegrityError: If username or email already exists.
     """
-    sql = "INSERT INTO users (username, password_hash, email) VALUES (?, ?, ?)"
+    sql = (
+        "INSERT INTO users (username, password_hash, email) "
+        "VALUES (?, ?, ?)"
+    )
     conn = get_connection()
     try:
         cursor = conn.execute(sql, (username, password_hash, email))
@@ -267,11 +278,12 @@ def get_user_by_username(username: str) -> tuple | None:
     """Look up a user row by username.
 
     Returns:
-        A (id, username, password_hash, email, date_registered, last_login)
-        tuple, or None if not found.
+        A (id, username, password_hash, email, date_registered,
+         last_login) tuple, or None if not found.
     """
     sql = (
-        "SELECT id, username, password_hash, email, date_registered, last_login "
+        "SELECT id, username, password_hash, email, "
+        "date_registered, last_login "
         "FROM users WHERE username = ?"
     )
     conn = get_connection()

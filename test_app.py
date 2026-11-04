@@ -52,8 +52,8 @@ def client(isolated_db, monkeypatch):
     monkeypatch.setattr("main.key_manager.db_manager.DB_FILE", isolated_db)
 
     import main as m
-    # Reset rate-limiter buckets between tests
-    m._buckets.clear()
+    # Reset rate-limiter state between tests
+    m._request_log.clear()
     m.app.config["TESTING"] = True
     with m.app.test_client() as c:
         yield c
@@ -430,25 +430,25 @@ class TestAuthEndpoint:
     def test_auth_rate_limit(self, client):
         """11th request in quick succession should return 429."""
         import main as m
-        m._buckets.clear()
-        # Freeze monotonic time so no window resets between requests
-        fixed_time = time.monotonic()
-        with patch("main.time.monotonic", return_value=fixed_time):
+        m._request_log.clear()
+        # Freeze time so no requests age out of the sliding window
+        fixed_time = time.time()
+        with patch("main.time.time", return_value=fixed_time):
             responses = [client.post("/auth") for _ in range(11)]
         status_codes = [r.status_code for r in responses]
         assert 429 in status_codes
 
     def test_auth_rate_limit_refills(self, client):
-        """After waiting >1s the window resets and allows requests."""
+        """After waiting >1s the window slides and allows requests."""
         import main as m
-        m._buckets.clear()
-        fixed_time = time.monotonic()
-        with patch("main.time.monotonic", return_value=fixed_time):
+        m._request_log.clear()
+        fixed_time = time.time()
+        with patch("main.time.time", return_value=fixed_time):
             for _ in range(10):
                 client.post("/auth")
-        # New window: time advanced by 1.1s → counter resets
+        # Advance time past the 1-second window → old entries evicted
         new_time = fixed_time + 1.1
-        with patch("main.time.monotonic", return_value=new_time):
+        with patch("main.time.time", return_value=new_time):
             res = client.post("/auth")
         assert res.status_code == 200
 

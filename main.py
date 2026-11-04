@@ -4,12 +4,13 @@ New in Project 3:
   - AES-256 encryption of private keys at rest (via NOT_MY_KEY env var)
   - POST /register  — user registration with Argon2-hashed passwords
   - Auth-request logging to the auth_logs table
-  - Token-bucket rate limiter on POST /auth (10 req/s, 429 on breach)
+  - Sliding-window rate limiter on POST /auth (10 req/s, 429 on breach)
 
 SQL injection is prevented throughout by parameterized queries only.
 """
 
 import os
+import collections
 import threading
 import time
 import uuid
@@ -25,42 +26,42 @@ import key_manager
 app = Flask(__name__)
 
 # ---------------------------------------------------------------------------
-# Argon2 password hasher (configurable settings per spec)
+# Argon2 password hasher
 # ---------------------------------------------------------------------------
 _ph = PasswordHasher(
-    time_cost=2,        # iterations
-    memory_cost=65536,  # 64 MB
+    time_cost=2,
+    memory_cost=65536,
     parallelism=2,
     hash_len=32,
     salt_len=16,
 )
 
 # ---------------------------------------------------------------------------
-# Fixed-window rate limiter (10 requests/second on POST /auth)
+# Sliding-window rate limiter: 10 requests per second per IP
 # ---------------------------------------------------------------------------
-_RATE_LIMIT = 10       # max requests per 1-second window
+_RATE_LIMIT = 10       # max requests per window
 _RATE_WINDOW = 1.0     # window size in seconds
-_bucket_lock = threading.Lock()
-_buckets: dict[str, dict] = {}   # keyed by client IP
+_rate_lock = threading.Lock()
+_request_log: dict[str, collections.deque] = {}
 
 
 def _is_rate_limited(ip: str) -> bool:
-    """Return True if the given IP has exceeded 10 requests per second.
+    """Return True if the IP has exceeded 10 requests in the last second.
 
-    Uses a fixed-window counter: counts requests within the current
-    1-second window and rejects once the count exceeds _RATE_LIMIT.
+    Uses a sliding-window log: timestamps of recent requests are kept in
+    a deque and entries older than 1 second are evicted on every check.
     """
-    now = time.monotonic()
-    with _bucket_lock:
-        bucket = _buckets.get(ip)
-        if bucket is None or (now - bucket["window_start"]) >= _RATE_WINDOW:
-            # Start a fresh window
-            _buckets[ip] = {"window_start": now, "count": 1}
-            return False
-
-        bucket["count"] += 1
-        if bucket["count"] > _RATE_LIMIT:
+    now = time.time()
+    with _rate_lock:
+        if ip not in _request_log:
+            _request_log[ip] = collections.deque()
+        timestamps = _request_log[ip]
+        # Evict entries older than the window
+        while timestamps and (now - timestamps[0]) >= _RATE_WINDOW:
+            timestamps.popleft()
+        if len(timestamps) >= _RATE_LIMIT:
             return True
+        timestamps.append(now)
         return False
 
 
@@ -104,11 +105,11 @@ def auth():
         expired: if present, sign with an expired key.
 
     Rate limited to 10 requests/second per IP (returns 429 on breach).
-    Every successful request is logged to auth_logs.
+    Every rate-limit-passing request is logged to auth_logs.
     """
     client_ip = request.remote_addr or "127.0.0.1"
 
-    # --- Rate limiting ---
+    # --- Rate limiting (429 if over limit) ---
     if _is_rate_limited(client_ip):
         return jsonify({"error": "Too Many Requests"}), 429
 
@@ -141,7 +142,7 @@ def auth():
     user_row = db_manager.get_user_by_username(username)
     user_id = user_row[0] if user_row else None
 
-    # --- Log the authentication request (before JWT encoding) ---
+    # --- Log the authentication request to auth_logs ---
     db_manager.log_auth_request(client_ip, user_id)
 
     payload = {
@@ -175,7 +176,7 @@ def register():
 
     Accepts JSON body: {"username": "...", "email": "..."}
     Generates a UUIDv4 password, hashes it with Argon2, stores the user,
-    and returns {"password": "<uuid>"}.
+    and returns {"password": "<uuid>"} with HTTP 201 Created.
     """
     if not request.is_json:
         return jsonify({"error": "Request body must be JSON"}), 400
@@ -196,7 +197,6 @@ def register():
     try:
         db_manager.create_user(username, password_hash, email)
     except Exception as err:
-        # Covers UNIQUE constraint violations (duplicate username/email)
         return jsonify({"error": f"Registration failed: {str(err)}"}), 409
 
     return jsonify({"password": password}), 201
