@@ -1,3 +1,4 @@
+<img width="1353" height="635" alt="Image 11-4-26 at 9 45 AM" src="https://github.com/user-attachments/assets/4e38614f-77cb-41bb-a1bb-0c4fc4310766" />
 # CSCE 3550 — Project 3: Bulking Up Our JWKS Server
 
 Enhancing security and user management in the RESTful JWKS (JSON Web Key Set) server.
