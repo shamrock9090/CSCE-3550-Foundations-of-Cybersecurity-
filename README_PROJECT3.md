@@ -203,22 +203,4 @@ printf 'n\n' | ./gradebot project-3 \
 ├──────────────────────────────────────┼────────┼─────────┼───────────────────────────┤
 │ Grade:                               │        │  99.21% │                           │
 └──────────────────────────────────────┴────────┴─────────┴───────────────────────────┘
-```
 
----
-
-## Rubric Breakdown (120 Points Possible)
-
-| Criteria | Points | Status |
-| :--- | :---: | :---: |
-| **Create users table** | 5 / 5 | Full Marks |
-| **/register endpoint** | 20 / 20 | Full Marks |
-| **Private keys are encrypted** (AES-256 via `NOT_MY_KEY`) | 25 / 25 | Full Marks |
-| **Create auth_logs table** | 5 / 5 | Full Marks |
-| **/auth requests are logged** | 10 / 10 | Full Marks |
-| **/auth is rate-limited (optional)** (10 req/s, HTTP 429) | 25 / 25 | Full Marks |
-| **Testsuite is present** | 15 / 15 | Full Marks |
-| **Test coverage (>80%)** (Achieved 98%) | 5 / 5 | Full Marks |
-| **Documentation/Linting/Organization** (Flake8 clean) | 5 / 5 | Full Marks |
-| **Screenshot for gradebot** | 5 / 5 | Ready to capture |
-| **Total** | **120 / 120** | **100%** |
